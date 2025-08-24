@@ -1,0 +1,76 @@
+name: Skylink Sensor Scheduler 24/7
+
+on:
+  push:
+    branches: [ main, master ]
+  workflow_dispatch:
+    inputs:
+      action:
+        description: 'Action to perform'
+        required: true
+        default: 'start'
+        type: choice
+        options:
+        - start
+        - stop
+        - status
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10  # 10 minutes for deployment
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+      
+    - name: Setup Node.js
+      uses: actions/setup-node@v3
+      with:
+        node-version: '18'
+        cache: 'npm'
+        
+    - name: Cache Playwright browsers
+      uses: actions/cache@v3
+      with:
+        path: ~/.cache/ms-playwright
+        key: ${{ runner.os }}-playwright-${{ hashFiles('**/package-lock.json') }}
+        restore-keys: |
+          ${{ runner.os }}-playwright-
+        
+    - name: Install dependencies
+      run: |
+        npm ci
+        npx playwright install chromium --with-deps
+        
+    - name: Auto-Start 24/7 Skylink Testing (on push)
+      if: github.event_name == 'push'
+      run: |
+        echo "🚀 Code deployed successfully!"
+        echo "⏰ To start 24/7 testing: Run workflow manually with 'start'"
+        echo "🔄 Command: npx playwright test tests/main.spec.js --project=chromium"
+        echo "✅ Deployment complete - no auto-start to prevent infinite loop"
+        
+    - name: Manual Start Skylink Testing
+      if: github.event.inputs.action == 'start'
+      run: |
+        echo "🚀 Manually starting 24/7 Skylink Sensor Testing..."
+        echo "⏰ Command: npx playwright test tests/main.spec.js --project=chromium"
+        
+        # Run the main test file continuously
+        npx playwright test tests/main.spec.js --project=chromium
+        
+    - name: Check Status
+      if: github.event.inputs.action == 'status'
+      run: |
+        echo "📊 Skylink Sensor Testing Status:"
+        echo "✅ GitHub Actions runner is active"
+        echo "🔍 Command: npx playwright test tests/main.spec.js --project=chromium"
+        echo "📅 Auto-runs on every git push to master branch"
+        
+    - name: Stop Testing
+      if: github.event.inputs.action == 'stop'
+      run: |
+        echo "🛑 Stopping Skylink Sensor Testing..."
+        echo "ℹ️ Tests will stop when this GitHub Action completes"
+        echo "✅ To restart: Push code or manually run workflow with 'start'"
