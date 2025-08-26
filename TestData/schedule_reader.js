@@ -68,14 +68,17 @@ class ScheduleReader {
   }
 
   static extractLocation(deviceName) {
-    // Extract location from device name (e.g., "BOB Washroom PIR" -> "Washroom")
-    const parts = deviceName.split(' ');
-    // For Skylink devices, location is typically the second part
-    // e.g., "BOB Washroom PIR" -> "Washroom", "BOB Kitchen DOOR" -> "Kitchen"
-    if (parts.length >= 2) {
-      return parts[1];
-    }
-    return parts[parts.length - 1];
+    // Extract location from device name preserving multi-word locations
+    // Examples:
+    //  - "BOB Dinning room PIR" => "Dinning room"
+    //  - "BOB Livingroom PIR"   => "Livingroom"
+    //  - "BOB Kitchen DOOR"     => "Kitchen"
+    if (!deviceName || typeof deviceName !== 'string') return '';
+    // Remove leading owner prefix (e.g., "BOB ")
+    let name = deviceName.replace(/^\s*BOB\s+/i, '');
+    // Remove trailing sensor type suffix (e.g., " PIR" or " DOOR")
+    name = name.replace(/\s+(PIR|DOOR)\s*$/i, '');
+    return name.trim();
   }
 
   static getCurrentTimeSlot(schedule) {
