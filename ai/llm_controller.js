@@ -74,7 +74,7 @@ Rules (important):
 9) Be concise; output only the JSON object as specified.
 
 Valid locations: Bedroom, Washroom, Bathroom, Kitchen, Livingroom, Office, Dinning room
-Valid deviceType: PIR or DOOR
+Valid deviceType: PIR (PIR-only system)
 
 Decide if Bob would stay with the scheduled slot or move logically to another location now.
 Respond with strict JSON in this schema:
@@ -89,7 +89,7 @@ Respond with strict JSON in this schema:
 
 function validateDecision(obj) {
   const locations = new Set(['Bedroom', 'Washroom', 'Bathroom', 'Kitchen', 'Livingroom', 'Office', 'Dinning room']);
-  const devices = new Set(['PIR', 'DOOR']);
+  const devices = new Set(['PIR']);
   if (!obj || typeof obj !== 'object') return 'Not an object';
   if (!locations.has(obj.location)) return `Invalid location: ${obj.location}`;
   if (!devices.has(obj.deviceType)) return `Invalid deviceType: ${obj.deviceType}`;

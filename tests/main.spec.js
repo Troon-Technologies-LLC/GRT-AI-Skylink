@@ -6,6 +6,7 @@ const BobLivingroomPir = require('../Fixtures/BobLivingroomPir');
 const BobOfficePir = require('../Fixtures/BobOfficePir');
 const BobBathroomPir = require('../Fixtures/BobBathroomPir');
 const BobDinningroomPir = require('../Fixtures/BobDinningroomPir');
+const BobWashroomPir = require('../Fixtures/BobWashroomPir');
 const ScheduleReader = require('../TestData/schedule_reader');
 const EmailReporter = require('../TestData/email_reporter');
 
@@ -242,6 +243,8 @@ async function runCurrentScheduleTest(page, testCount, emailReporter, emailValid
           // Human-like guardrails before accepting override
           const suggestedLoc = llmDecision.location;
           const suggestedDevType = llmDecision.deviceType;
+          // PIR-only system: coerce any DOOR suggestion to PIR
+          const effectiveDevType = 'PIR';
           const currentLoc = currentSlot ? currentSlot.location : (lastEffective ? lastEffective.location : suggestedLoc);
           const confidence = Number(llmDecision.confidence) || 0;
 
@@ -294,14 +297,15 @@ async function runCurrentScheduleTest(page, testCount, emailReporter, emailValid
 
           // Build an effective slot from AI decision
           if (allowMove) {
-            const device = suggestedDevType === 'DOOR' ? `BOB ${suggestedLoc} DOOR` : `BOB ${suggestedLoc} PIR`;
+            const device = `BOB ${suggestedLoc} ${effectiveDevType}`;
             effectiveSlot = {
               location: suggestedLoc,
               device,
               startTime: currentSlot ? currentSlot.startTime : 'N/A',
               endTime: currentSlot ? currentSlot.endTime : 'N/A'
             };
-            console.log(`🤖 Action: Override enabled — using AI-selected slot -> ${effectiveSlot.location} (${suggestedDevType})`);
+            const coercedNote = suggestedDevType !== effectiveDevType ? ` (coerced ${suggestedDevType}→${effectiveDevType})` : '';
+            console.log(`🤖 Action: Override enabled — using AI-selected slot -> ${effectiveSlot.location} (${effectiveDevType})${coercedNote}`);
           } else {
             console.log(`🛑 Override blocked by human-like rules: ${reason.join('; ') || 'policy'}`);
             console.log('✅ Action: Keeping scheduled slot');
@@ -309,7 +313,7 @@ async function runCurrentScheduleTest(page, testCount, emailReporter, emailValid
         } else if (!llmDecision.error) {
           if (LLM_FREE_RUN) {
             // In free-run confirm-only, still act on AI but respect guardrails
-            const device = llmDecision.deviceType === 'DOOR' ? `BOB ${llmDecision.location} DOOR` : `BOB ${llmDecision.location} PIR`;
+            const device = `BOB ${llmDecision.location} PIR`;
             effectiveSlot = {
               location: llmDecision.location,
               device,
@@ -347,7 +351,7 @@ async function runCurrentScheduleTest(page, testCount, emailReporter, emailValid
         break;
       
       case 'Washroom':
-        const bobWashroomPir = new BobBedroomPir(page);
+        const bobWashroomPir = new BobWashroomPir(page);
         response = await bobWashroomPir.sendSensorData();
         responseStatus = response.status();
         console.log('✅ Washroom PIR Sensor Test - Response Status:', responseStatus);
