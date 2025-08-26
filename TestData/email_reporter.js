@@ -109,8 +109,11 @@ class EmailReporter {
 
   // Get results from last hour
   getLastHourResults() {
-    const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000);
-    return this.testResults.filter(result => result.timestamp > oneHourAgo);
+    // Return results since the last time we sent a report.
+    // This avoids edge cases where a strict rolling 1-hour window only captures 1 entry
+    // due to timing alignment of the interval vs. test cycles.
+    const since = this.lastReportTime || new Date(Date.now() - 60 * 60 * 1000);
+    return this.testResults.filter(result => result.timestamp > since);
   }
 
   // Generate HTML email report

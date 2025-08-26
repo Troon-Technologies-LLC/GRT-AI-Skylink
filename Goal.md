@@ -1,5 +1,8 @@
 # Skylink PIR & DOOR Sensor Project - Goals & Implementation
 
+
+npx playwright test tests\main.spec.js --project=chromium
+npx playwright test tests/main.spec.js --project=chromium
 ## 🎯 Project Overview
 This project creates a 24/7 automation system for testing Skylink PIR and DOOR sensors based on a client's weekly routine schedule. The system continuously monitors and tests sensors every 5 minutes, sending hourly email reports.
 
@@ -18,8 +21,7 @@ This project creates a 24/7 automation system for testing Skylink PIR and DOOR s
 - Handles "away from home" scenarios gracefully
 
 ### ✅ Skylink Device Support
-- **PIR Sensors**: Motion detection for Bedroom, Kitchen, Livingroom, Office, Bathroom
-- **DOOR Sensors**: Open/close detection for Basement
+- **PIR Sensors**: Motion detection for Bedroom, Kitchen, Livingroom, Office, Bathroom, Dinning room
 - Dynamic payload generation with realistic sensor data
 - Proper API integration with https://dev-functions.grtinsight.com/api/Skylink
 
@@ -47,7 +49,7 @@ Content-Type: application/json
 ```json
 {
     "timestamp": 1742542779.274,
-    "deviceId": "BOB Bedroom",
+    "deviceId": "BOB Washroom",
     "client_name": "GRT Health",
     "payload_type": "PIR",
     "frame_type": "DETECTED_MOVEMENT",
@@ -64,12 +66,12 @@ Content-Type: application/json
 ```
 
 ## 🏠 Device Mapping
-- **BOB Bedroom PIR** → Bedroom location (12:00 AM - 8:00 AM)
+- **BOB Washroom PIR** → Washroom location (12:00 AM - 8:00 AM)
 - **BOB Bathroom PIR** → Bathroom location (8:00 AM - 8:30 AM)
 - **BOB Kitchen PIR** → Kitchen location (8:30 AM - 9:00 AM)
 - **BOB Livingroom PIR** → Livingroom location (9:00 AM - 11:00 AM)
 - **BOB Office PIR** → Office location (11:00 AM - 8:00 PM)
-- **BOB Basement DOOR** → Basement location (8:00 PM - 11:59 PM)
+- **BOB Dinning room PIR** → Dinning room location (8:00 PM - 11:59 PM)
 
 ## 🔧 Deployment Options
 

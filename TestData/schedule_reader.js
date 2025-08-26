@@ -58,7 +58,7 @@ class ScheduleReader {
         }
       }
       
-      console.log(`Successfully read ${schedule.length} schedule entries from ${csvFileName}`);
+      console.log(`⛳Successfully read ${schedule.length} schedule entries from ${csvFileName}`);
       return schedule;
       
     } catch (error) {
@@ -68,10 +68,10 @@ class ScheduleReader {
   }
 
   static extractLocation(deviceName) {
-    // Extract location from device name (e.g., "BOB Bedroom PIR" -> "Bedroom")
+    // Extract location from device name (e.g., "BOB Washroom PIR" -> "Washroom")
     const parts = deviceName.split(' ');
     // For Skylink devices, location is typically the second part
-    // e.g., "BOB Bedroom PIR" -> "Bedroom", "BOB Kitchen DOOR" -> "Kitchen"
+    // e.g., "BOB Washroom PIR" -> "Washroom", "BOB Kitchen DOOR" -> "Kitchen"
     if (parts.length >= 2) {
       return parts[1];
     }
@@ -94,16 +94,17 @@ class ScheduleReader {
     const current = this.timeToMinutes(currentTime);
     const start = this.timeToMinutes(startTime);
     let end = this.timeToMinutes(endTime);
+    const endInclusive = /11:59\s*PM/i.test(endTime);
     
     // Handle overnight time ranges (e.g., 20:00 - 8:00)
     if (end < start) {
       end += 24 * 60; // Add 24 hours in minutes
       if (current < start) {
-        return current + 24 * 60 >= start && current + 24 * 60 <= end;
+        return (current + 24 * 60) >= start && (endInclusive ? (current + 24 * 60) <= end : (current + 24 * 60) < end);
       }
     }
     
-    return current >= start && current <= end;
+    return current >= start && (endInclusive ? current <= end : current < end);
   }
 
   static timeToMinutes(timeStr) {

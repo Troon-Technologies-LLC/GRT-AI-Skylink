@@ -139,7 +139,7 @@ class WeeklyScheduler {
       'Livingroom': 'tests/individual/livingroom.spec.js',
       'Office': 'tests/individual/office.spec.js',
       'Bathroom': 'tests/individual/bathroom.spec.js',
-      'Basement': 'tests/individual/basement.spec.js'
+      'Dinning room': 'tests/individual/dinningroom.spec.js'
     };
     
     return testMap[location] || null;

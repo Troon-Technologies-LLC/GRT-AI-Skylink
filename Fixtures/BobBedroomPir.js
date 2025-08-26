@@ -1,11 +1,11 @@
-// BOB Bedroom PIR sensor fixture - Page Object Model
+// BOB Washroom PIR sensor fixture - Page Object Model
 class BobBedroomPir {
   constructor(page) {
     this.page = page;
     this.apiUrl = 'https://dev-functions.grtinsight.com/api/Skylink';
     this.sensorData = {
       timestamp: Date.now() / 1000, // Unix timestamp in seconds
-      deviceId: "BOB Bedroom",
+      deviceId: "BOB Washroom",
       client_name: "GRT Health",
       payload_type: "PIR",
       frame_type: "DETECTED_MOVEMENT",
@@ -46,9 +46,9 @@ class BobBedroomPir {
   // Get sensor information
   getSensorInfo() {
     return {
-      name: "BOB Bedroom PIR",
+      name: "BOB Washroom PIR",
       type: "PIR",
-      location: "Bedroom",
+      location: "Washroom",
       status: "active",
       deviceId: this.sensorData.deviceId
     };
