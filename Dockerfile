@@ -9,25 +9,29 @@ RUN apt-get update && apt-get install -y \
     procps \
     && rm -rf /var/lib/apt/lists/*
 
+# Create a non-root user with home directory
+RUN groupadd -r appuser && useradd -r -g appuser -m -d /home/appuser appuser
+
 # Set working directory
 WORKDIR /app
 
 # Copy package files
 COPY package*.json ./
 
-# Install Node.js dependencies
+# Install Node.js dependencies as root first
 RUN npm ci --only=production
 
-# Install Playwright and Chromium browser
+# Install Playwright and Chromium browser as root
 RUN npx playwright install chromium
 RUN npx playwright install-deps chromium
 
 # Copy application source code
 COPY . .
 
-# Create a non-root user for security
-RUN groupadd -r appuser && useradd -r -g appuser appuser
-RUN chown -R appuser:appuser /app
+# Set proper ownership of all files
+RUN chown -R appuser:appuser /app /home/appuser
+
+# Switch to non-root user
 USER appuser
 
 # Expose port (if needed for health checks or monitoring)
