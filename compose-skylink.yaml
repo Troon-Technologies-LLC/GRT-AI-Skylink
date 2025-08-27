@@ -1,0 +1,25 @@
+version: '3'
+
+services:
+  skylink-grt:
+    image: troontech/be-packages-scan:skylink-grt
+    hostname: 10.90.0.2
+    container_name: skylink-grt
+    env_file:
+      - .env
+
+    ports:
+      - '5002:3000'
+
+    networks:
+      skylink-grt:
+        ipv4_address: 10.90.0.2
+
+    restart: on-failure
+
+networks:
+  skylink-grt:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 10.90.0.0/16

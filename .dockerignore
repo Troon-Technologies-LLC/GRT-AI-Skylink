@@ -1,0 +1,49 @@
+# Node modules (will be installed in container)
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Git files
+.git/
+.gitignore
+
+# Documentation
+README.md
+Goal.md
+
+# Windows batch files (not needed in Linux container)
+*.bat
+
+# Environment files (should be mounted or passed as env vars)
+.env
+.env.local
+.env.production
+
+# Test results and coverage
+coverage/
+test-results/
+playwright-report/
+
+# Logs
+*.log
+logs/
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Temporary files
+tmp/
+temp/
