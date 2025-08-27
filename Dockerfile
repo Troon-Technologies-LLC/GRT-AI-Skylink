@@ -21,10 +21,6 @@ COPY package*.json ./
 # Install Node.js dependencies as root first
 RUN npm ci
 
-# Install Playwright and Chromium browser as root
-RUN npx playwright install chromium
-RUN npx playwright install-deps chromium
-
 # Copy application source code
 COPY . .
 
@@ -33,6 +29,10 @@ RUN chown -R appuser:appuser /app /home/appuser
 
 # Switch to non-root user
 USER appuser
+
+# Install Playwright browsers as appuser so they're in the correct location
+RUN npx playwright install chromium
+RUN npx playwright install-deps chromium
 
 # Expose port (if needed for health checks or monitoring)
 EXPOSE 3000
