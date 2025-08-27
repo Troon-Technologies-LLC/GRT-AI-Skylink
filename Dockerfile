@@ -19,7 +19,7 @@ WORKDIR /app
 COPY package*.json ./
 
 # Install Node.js dependencies as root first
-RUN npm ci --only=production
+RUN npm ci
 
 # Install Playwright and Chromium browser as root
 RUN npx playwright install chromium
