@@ -3,6 +3,8 @@
 
 npx playwright test tests\main.spec.js --project=chromium
 npx playwright test tests/main.spec.js --project=chromium
+behave as a QA engineer and test the bob activity assume the xyz daty and time check the flow 
+npx playwright test tests/main.spec.js --project=chromium --reporter=line --workers=1
 ## 🎯 Project Overview
 This project creates a 24/7 automation system for testing Skylink PIR and DOOR sensors based on a client's weekly routine schedule. The system continuously monitors and tests sensors every 5 minutes, sending hourly email reports.
 

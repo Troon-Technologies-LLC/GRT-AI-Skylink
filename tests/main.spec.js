@@ -27,33 +27,6 @@ function resolveTimeZone(tzEnv) {
 const RESOLVED_TZ = resolveTimeZone(process.env.TIME_ZONE);
 // Allow skipping email functionality via env var
 const SKIP_EMAIL = process.env.SKIP_EMAIL === 'true';
-const LLM_FREE_RUN = process.env.LLM_FREE_RUN === 'true' || (process.env.LLM_MODE || '').toLowerCase() === 'free_run';
-
-// --- Human-like behavior tuning ---
-const HUMAN_MIN_DWELL_MIN = parseInt(process.env.MIN_DWELL_MINUTES || '10', 10); // minimum minutes to stay before moving
-const HUMAN_COOLDOWN_MIN = parseInt(process.env.COOLDOWN_MINUTES || '5', 10); // avoid repeating same room too soon
-const HUMAN_RANDOM_JITTER = Math.min(1, Math.max(0, parseFloat(process.env.RANDOM_JITTER || '0.1'))); // 0..1 probability to ignore a suggested move
-const STRICT_MOVE_BONUS = 0.15; // extra confidence required when breaking dwell or adjacency
-const NON_ADJ_MOVE_CONF = 0.9;  // hard confidence required for non-adjacent jumps
-
-// Room adjacency for plausible transitions at low confidence
-const TRANSITION_ADJACENCY = {
-  Washroom: ['Bathroom', 'Bedroom', 'Livingroom'],
-  Bathroom: ['Washroom', 'Bedroom', 'Livingroom'],
-  Bedroom: ['Bathroom', 'Washroom', 'Office'],
-  Kitchen: ['Livingroom', 'Bathroom'],
-  Livingroom: ['Kitchen', 'Office', 'Washroom', 'Bathroom', 'Dinning room'],
-  Office: ['Livingroom', 'Bedroom'],
-  'Dinning room': ['Livingroom', 'Kitchen']
-};
-
-// Meal windows used for prompt context (LLM uses these hints)
-const MEAL_WINDOWS = { breakfast: '07:00-09:30', lunch: '12:00-14:00', dinner: '18:00-20:00' };
-
-// Recent state across cycles
-let recentHistory = []; // { time, location, device }
-let lastEffective = null; // { location, device }
-let lastChangeAt = null; // Date of last location change
 
 function timeStringInTZ(date = new Date()) {
   // 12-hour display with AM/PM for logging
@@ -161,11 +134,11 @@ async function runCurrentScheduleTest(page, testCount, emailReporter, emailValid
   
   console.log(`📅 Testing for: ${dayName}`);
   
-  // Load today's schedule unless AI free-run mode is active
-  const schedule = LLM_FREE_RUN ? [] : ScheduleReader.readDailySchedule(csvFileName);
-  const currentSlot = LLM_FREE_RUN ? null : ScheduleReader.getCurrentTimeSlot(schedule);
+  // Load today's schedule and determine the current slot
+  const schedule = ScheduleReader.readDailySchedule(csvFileName);
+  const currentSlot = ScheduleReader.getCurrentTimeSlot(schedule);
   
-  if (!currentSlot && !LLM_FREE_RUN) {
+  if (!currentSlot) {
     console.log('🏠 BOB is away from home - No active time slot found');
     console.log('📊 Test Status: RUNNING (monitoring continues)');
     console.log(`📈 Test Cycle #${testCount} completed - System operational`);
@@ -197,139 +170,8 @@ async function runCurrentScheduleTest(page, testCount, emailReporter, emailValid
   const timeStr = timeStringInTZ(now);
   const isWeekend = ['Saturday', 'Sunday'].includes(dayName);
 
-  // Decide which slot to execute (schedule by default, AI may override)
+  // Execute the scheduled slot (no AI override)
   let effectiveSlot = currentSlot;
-  
-  // Optional: consult LLM for confirmation or suggestion
-  try {
-    if (process.env.ENABLE_LLM === 'true') {
-      const { decideAction } = require('../ai/llm_controller');
-      // Compute dwell time so far in minutes
-      let dwellMinutesSoFar = 0;
-      if (lastEffective && lastChangeAt) {
-        const ms = now - lastChangeAt;
-        dwellMinutesSoFar = Math.max(0, Math.floor(ms / 60000));
-      }
-      // Prepare history (keep last 6 entries)
-      const history = recentHistory.slice(-6);
-      const llmContext = {
-        dayName,
-        time: timeStr,
-        schedule: LLM_FREE_RUN ? [] : (schedule?.map(s => ({ location: s.location, device: s.device, startTime: s.startTime, endTime: s.endTime })) || []),
-        currentSlot: LLM_FREE_RUN ? null : currentSlot,
-        isWeekend,
-        isAway: LLM_FREE_RUN ? false : !currentSlot,
-        history,
-        dwellMinutesSoFar,
-        minDwellMinutes: HUMAN_MIN_DWELL_MIN,
-        transitionAdjacency: TRANSITION_ADJACENCY,
-        cooldownMinutes: HUMAN_COOLDOWN_MIN,
-        mealWindows: MEAL_WINDOWS
-      };
-      const llmDecision = await decideAction(llmContext);
-      if (llmDecision) {
-        const mode = (process.env.LLM_MODE || 'confirm_only').toLowerCase();
-        const meets = !!llmDecision._meetsThreshold;
-        const confPct = typeof llmDecision.confidence === 'number' ? Math.round(llmDecision.confidence * 100) : 'N/A';
-        if (!llmDecision.error) {
-          console.log('🧠 AI Decision');
-          console.log(`   • Location: ${llmDecision.location}  • Device: ${llmDecision.deviceType}`);
-          console.log(`   • Confidence: ${confPct}%  • Mode: ${mode}${LLM_FREE_RUN ? ' (free-run)' : ''}`);
-          console.log(`   • Rationale: ${llmDecision.rationale}`);
-        } else {
-          console.log('🧠 AI Decision Error:', llmDecision.error);
-        }
-        if ((LLM_FREE_RUN || mode === 'override') && meets && !llmDecision.error) {
-          // Human-like guardrails before accepting override
-          const suggestedLoc = llmDecision.location;
-          const suggestedDevType = llmDecision.deviceType;
-          // PIR-only system: coerce any DOOR suggestion to PIR
-          const effectiveDevType = 'PIR';
-          const currentLoc = currentSlot ? currentSlot.location : (lastEffective ? lastEffective.location : suggestedLoc);
-          const confidence = Number(llmDecision.confidence) || 0;
-
-          let allowMove = true;
-          let reason = [];
-
-          // Dwell enforcement
-          if (lastEffective && lastEffective.location === currentLoc && HUMAN_MIN_DWELL_MIN > 0) {
-            const ms = now - (lastChangeAt || now);
-            const dwell = Math.max(0, Math.floor(ms / 60000));
-            if (dwell < HUMAN_MIN_DWELL_MIN && suggestedLoc !== currentLoc) {
-              if (confidence < Math.min(1, (parseFloat(process.env.LLM_CONFIDENCE_MIN || '0.7') + STRICT_MOVE_BONUS))) {
-                allowMove = false;
-                reason.push(`dwell ${dwell}m < min ${HUMAN_MIN_DWELL_MIN}m`);
-              }
-            }
-          }
-
-          // Transition adjacency
-          const adj = TRANSITION_ADJACENCY[currentLoc] || [];
-          const adjacentOK = adj.includes(suggestedLoc) || suggestedLoc === currentLoc;
-          if (!adjacentOK && suggestedLoc !== currentLoc && confidence < NON_ADJ_MOVE_CONF) {
-            allowMove = false;
-            reason.push(`non-adjacent move requires >= ${Math.round(NON_ADJ_MOVE_CONF*100)}% confidence`);
-          }
-
-          // Cooldown on repeats (avoid spamming same location)
-          if (recentHistory.length > 0) {
-            const lastTime = recentHistory[recentHistory.length - 1].timeDate;
-            const minutesSince = Math.max(0, Math.floor((now - lastTime) / 60000));
-            if (suggestedLoc === currentLoc && minutesSince < HUMAN_COOLDOWN_MIN) {
-              // If suggesting to stay, cooldown not strictly necessary; keep for symmetry
-            } else {
-              const recentHit = recentHistory.slice(-4).find(h => h.location === suggestedLoc);
-              if (recentHit) {
-                const minutesSinceHit = Math.max(0, Math.floor((now - recentHit.timeDate) / 60000));
-                if (minutesSinceHit < HUMAN_COOLDOWN_MIN && confidence < 0.85) {
-                  allowMove = false;
-                  reason.push(`cooldown ${minutesSinceHit}m < ${HUMAN_COOLDOWN_MIN}m`);
-                }
-              }
-            }
-          }
-
-          // Random jitter to avoid clock-like behavior
-          if (Math.random() < HUMAN_RANDOM_JITTER) {
-            allowMove = false;
-            reason.push('random jitter');
-          }
-
-          // Build an effective slot from AI decision
-          if (allowMove) {
-            const device = `BOB ${suggestedLoc} ${effectiveDevType}`;
-            effectiveSlot = {
-              location: suggestedLoc,
-              device,
-              startTime: currentSlot ? currentSlot.startTime : 'N/A',
-              endTime: currentSlot ? currentSlot.endTime : 'N/A'
-            };
-            const coercedNote = suggestedDevType !== effectiveDevType ? ` (coerced ${suggestedDevType}→${effectiveDevType})` : '';
-            console.log(`🤖 Action: Override enabled — using AI-selected slot -> ${effectiveSlot.location} (${effectiveDevType})${coercedNote}`);
-          } else {
-            console.log(`🛑 Override blocked by human-like rules: ${reason.join('; ') || 'policy'}`);
-            console.log('✅ Action: Keeping scheduled slot');
-          }
-        } else if (!llmDecision.error) {
-          if (LLM_FREE_RUN) {
-            // In free-run confirm-only, still act on AI but respect guardrails
-            const device = `BOB ${llmDecision.location} PIR`;
-            effectiveSlot = {
-              location: llmDecision.location,
-              device,
-              startTime: 'N/A',
-              endTime: 'N/A'
-            };
-            console.log('✅ Action: Free-run confirm — using AI-selected slot');
-          } else {
-            console.log('✅ Action: Confirm-only — keeping scheduled slot');
-          }
-        }
-      }
-    }
-  } catch (e) {
-    console.log('⚠️ LLM skipped (error or disabled):', e.message);
-  }
   
   console.log(`🕐 Current Time: ${timeStr}`);
   console.log(`📍 Client Location: ${effectiveSlot.location}`);
@@ -445,12 +287,5 @@ async function runCurrentScheduleTest(page, testCount, emailReporter, emailValid
     }
   }
 
-  // Update human-like state trackers
-  try {
-    const locChanged = !lastEffective || lastEffective.location !== effectiveSlot.location;
-    if (locChanged) lastChangeAt = new Date();
-    lastEffective = { location: effectiveSlot.location, device: effectiveSlot.device };
-    recentHistory.push({ time: timeStr, location: effectiveSlot.location, device: effectiveSlot.device, timeDate: new Date() });
-    if (recentHistory.length > 12) recentHistory = recentHistory.slice(-12);
-  } catch {}
+  // No state tracking required
 }
