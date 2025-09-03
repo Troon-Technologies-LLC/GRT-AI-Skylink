@@ -5,12 +5,12 @@ class BobBathroomPir {
     this.apiUrl = 'https://dev-functions.grtinsight.com/api/Skylink';
     this.sensorData = {
       timestamp: Date.now() / 1000, // Unix timestamp in seconds
-      deviceId: "BOB Bathroom",
+      deviceId: "BOB Washroom",
       client_name: "GRT Health",
       payload_type: "PIR",
       frame_type: "DETECTED_MOVEMENT",
       temp: "25",
-      detection_bin_seq: "000000000000100000000000000000000000000010000000000000",
+      detection_bin_seq: "100000000000000000000000000000000000000000000000000000",
       battery: 2.5,
       dw_init: "closed at start",
       dw_inter: "closed during period",
