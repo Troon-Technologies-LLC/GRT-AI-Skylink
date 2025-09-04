@@ -1,5 +1,5 @@
-// BOB Bathroom PIR sensor fixture - Page Object Model
-class BobBathroomPir {
+// BOB Washroom PIR sensor fixture - Page Object Model
+class BobWashroomPir {
   constructor(page) {
     this.page = page;
     this.apiUrl = 'https://dev-functions.grtinsight.com/api/Skylink';
@@ -10,7 +10,7 @@ class BobBathroomPir {
       payload_type: "PIR",
       frame_type: "DETECTED_MOVEMENT",
       temp: "25",
-      detection_bin_seq: "100000000000000000000000000000000000000000000000000000",
+      detection_bin_seq: "000000000000100000000000000000000000000010000000000000",
       battery: 2.5,
       dw_init: "closed at start",
       dw_inter: "closed during period",
@@ -46,9 +46,9 @@ class BobBathroomPir {
   // Get sensor information
   getSensorInfo() {
     return {
-      name: "BOB Bathroom PIR",
+      name: "BOB Washroom PIR",
       type: "PIR",
-      location: "Bathroom",
+      location: "Washroom",
       status: "active",
       deviceId: this.sensorData.deviceId
     };
@@ -70,4 +70,4 @@ class BobBathroomPir {
   }
 }
 
-module.exports = BobBathroomPir;
+module.exports = BobWashroomPir;

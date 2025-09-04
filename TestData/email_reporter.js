@@ -27,7 +27,14 @@ function fmtDate(date = new Date()) {
 function fmtTime(date = new Date()) {
   const opts = { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false };
   const fmt = new Intl.DateTimeFormat('en-CA', RESOLVED_TZ ? { ...opts, timeZone: RESOLVED_TZ } : opts);
-  return fmt.format(date);
+  const timeStr = fmt.format(date);
+  
+  // Fix 24:XX format to 00:XX for midnight hours
+  if (timeStr.startsWith('24:')) {
+    return timeStr.replace('24:', '00:');
+  }
+  
+  return timeStr;
 }
 
 function fmtDateOnly(date = new Date()) {
@@ -109,8 +116,11 @@ class EmailReporter {
 
   // Get results from last hour
   getLastHourResults() {
-    const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000);
-    return this.testResults.filter(result => result.timestamp > oneHourAgo);
+    // Return results since the last time we sent a report.
+    // This avoids edge cases where a strict rolling 1-hour window only captures 1 entry
+    // due to timing alignment of the interval vs. test cycles.
+    const since = this.lastReportTime || new Date(Date.now() - 60 * 60 * 1000);
+    return this.testResults.filter(result => result.timestamp > since);
   }
 
   // Generate HTML email report

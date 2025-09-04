@@ -51,8 +51,8 @@ async function testEmailReporter() {
     testCycle: 3,
     dayName: 'Thursday',
     currentTime: new Date().toLocaleTimeString(),
-    location: 'Basement',
-    device: 'BOB Basement DOOR',
+    location: 'Dinning room',
+    device: 'BOB Dinning room PIR',
     timeSlot: '8:00 PM - 9:00 PM',
     status: 'success',
     responseStatus: 200,
@@ -74,19 +74,52 @@ async function testEmailReporter() {
   
   console.log('✅ Sample test results added');
   
-  // Test 3: Send test email report
-  console.log('📨 Sending test email report...');
-  
+  // Test 3: Send FIRST report (should include the 4 entries above)
+  console.log('📨 Sending FIRST test email report (should include 4 entries)...');
   try {
     await emailReporter.sendHourlyReport();
-    console.log('✅ Test email sent successfully!');
-    console.log('📬 Check your configured email address');
-    
+    console.log('✅ First test email sent successfully!');
   } catch (error) {
-    console.error('❌ Failed to send test email:', error.message);
+    console.error('❌ Failed to send FIRST test email:', error.message);
   }
-  
-  console.log('\n🎯 Skylink Email Reporter Test Complete!');
+
+  // Add a short delay, then add more entries and send a SECOND report
+  await new Promise(r => setTimeout(r, 2000));
+
+  console.log('\n📊 Adding additional results for SECOND report...');
+  emailReporter.logTestResult({
+    testCycle: 5,
+    dayName: 'Thursday',
+    currentTime: new Date().toLocaleTimeString(),
+    location: 'Bedroom',
+    device: 'BOB Bedroom PIR',
+    timeSlot: '12:00 AM - 8:00 AM',
+    status: 'success',
+    responseStatus: 200,
+    error: null
+  });
+  emailReporter.logTestResult({
+    testCycle: 6,
+    dayName: 'Thursday',
+    currentTime: new Date().toLocaleTimeString(),
+    location: 'Bathroom',
+    device: 'BOB Bathroom PIR',
+    timeSlot: '8:00 AM - 8:15 AM',
+    status: 'success',
+    responseStatus: 200,
+    error: null
+  });
+
+  console.log('📨 Sending SECOND test email report (should include ONLY the 2 new entries)...');
+  try {
+    await emailReporter.sendHourlyReport();
+    console.log('✅ Second test email sent successfully!');
+    console.log('📬 Check your inbox: First email has 4 entries, Second has 2 entries (since last report)');
+  } catch (error) {
+    console.error('❌ Failed to send SECOND test email:', error.message);
+  }
+
+  console.log('\n🎯 Skylink Email Reporter Two-Phase Test Complete!');
 }
 
 // Run the test

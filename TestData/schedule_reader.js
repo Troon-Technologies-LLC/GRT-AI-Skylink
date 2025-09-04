@@ -31,8 +31,14 @@ class ScheduleReader {
     const options = { hour: '2-digit', minute: '2-digit', hour12: false };
     const fmt = new Intl.DateTimeFormat('en-CA', RESOLVED_TZ ? { ...options, timeZone: RESOLVED_TZ } : options);
     const parts = fmt.formatToParts(new Date());
-    const hh = parts.find(p => p.type === 'hour')?.value || '00';
+    let hh = parts.find(p => p.type === 'hour')?.value || '00';
     const mm = parts.find(p => p.type === 'minute')?.value || '00';
+    
+    // Fix 24:XX format to 00:XX for midnight hours
+    if (hh === '24') {
+      hh = '00';
+    }
+    
     return `${hh}:${mm}`;
   }
   static readDailySchedule(csvFileName) {
@@ -58,7 +64,7 @@ class ScheduleReader {
         }
       }
       
-      console.log(`Successfully read ${schedule.length} schedule entries from ${csvFileName}`);
+      console.log(`⛳Successfully read ${schedule.length} schedule entries from ${csvFileName}`);
       return schedule;
       
     } catch (error) {
@@ -68,14 +74,17 @@ class ScheduleReader {
   }
 
   static extractLocation(deviceName) {
-    // Extract location from device name (e.g., "BOB Bedroom PIR" -> "Bedroom")
-    const parts = deviceName.split(' ');
-    // For Skylink devices, location is typically the second part
-    // e.g., "BOB Bedroom PIR" -> "Bedroom", "BOB Kitchen DOOR" -> "Kitchen"
-    if (parts.length >= 2) {
-      return parts[1];
-    }
-    return parts[parts.length - 1];
+    // Extract location from device name preserving multi-word locations
+    // Examples:
+    //  - "BOB Dining room PIR" => "Dining room"
+    //  - "BOB Livingroom PIR"   => "Livingroom"
+    //  - "BOB Kitchen DOOR"     => "Kitchen"
+    if (!deviceName || typeof deviceName !== 'string') return '';
+    // Remove leading owner prefix (e.g., "BOB ")
+    let name = deviceName.replace(/^\s*BOB\s+/i, '');
+    // Remove trailing sensor type suffix (e.g., " PIR" or " DOOR")
+    name = name.replace(/\s+(PIR|DOOR)\s*$/i, '');
+    return name.trim();
   }
 
   static getCurrentTimeSlot(schedule) {
@@ -94,16 +103,25 @@ class ScheduleReader {
     const current = this.timeToMinutes(currentTime);
     const start = this.timeToMinutes(startTime);
     let end = this.timeToMinutes(endTime);
+    const endInclusive = /11:59\s*PM/i.test(endTime);
     
-    // Handle overnight time ranges (e.g., 20:00 - 8:00)
-    if (end < start) {
-      end += 24 * 60; // Add 24 hours in minutes
-      if (current < start) {
-        return current + 24 * 60 >= start && current + 24 * 60 <= end;
+    // Handle overnight time ranges (e.g., 12:00 AM - 8:00 AM or 8:00 PM - 11:59 PM)
+    if (end <= start) {
+      // This is an overnight range like 12:00 AM - 8:00 AM
+      // Current time should be either:
+      // 1. From start time to end of day (start <= current < 1440)
+      // 2. From start of day to end time (0 <= current < end)
+      if (start === 0) {
+        // Special case: 12:00 AM - 8:00 AM
+        return current >= start && (endInclusive ? current <= end : current < end);
+      } else {
+        // Regular overnight range like 8:00 PM - 6:00 AM
+        return current >= start || current < end;
       }
     }
     
-    return current >= start && current <= end;
+    // Regular same-day range
+    return current >= start && (endInclusive ? current <= end : current < end);
   }
 
   static timeToMinutes(timeStr) {
@@ -127,7 +145,14 @@ class ScheduleReader {
     } else {
       // 24-hour format parsing (fallback)
       const [hours, minutes] = timeString.split(':').map(Number);
-      return hours * 60 + minutes;
+      
+      // Fix 24:XX format to 00:XX for midnight hours
+      let fixedHours = hours;
+      if (hours === 24) {
+        fixedHours = 0;
+      }
+      
+      return fixedHours * 60 + minutes;
     }
   }
 

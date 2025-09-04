@@ -5,7 +5,8 @@ const BobKitchenPir = require('../Fixtures/BobKitchenPir');
 const BobLivingroomPir = require('../Fixtures/BobLivingroomPir');
 const BobOfficePir = require('../Fixtures/BobOfficePir');
 const BobBathroomPir = require('../Fixtures/BobBathroomPir');
-const BobBasementDoor = require('../Fixtures/BobBasementDoor');
+const BobDinningroomPir = require('../Fixtures/BobDinningroomPir');
+const BobWashroomPir = require('../Fixtures/BobWashroomPir');
 const ScheduleReader = require('../TestData/schedule_reader');
 const EmailReporter = require('../TestData/email_reporter');
 
@@ -133,7 +134,7 @@ async function runCurrentScheduleTest(page, testCount, emailReporter, emailValid
   
   console.log(`📅 Testing for: ${dayName}`);
   
-  // Load today's schedule
+  // Load today's schedule and determine the current slot
   const schedule = ScheduleReader.readDailySchedule(csvFileName);
   const currentSlot = ScheduleReader.getCurrentTimeSlot(schedule);
   
@@ -167,11 +168,15 @@ async function runCurrentScheduleTest(page, testCount, emailReporter, emailValid
   
   const now = new Date();
   const timeStr = timeStringInTZ(now);
+  const isWeekend = ['Saturday', 'Sunday'].includes(dayName);
+
+  // Execute the scheduled slot (no AI override)
+  let effectiveSlot = currentSlot;
   
   console.log(`🕐 Current Time: ${timeStr}`);
-  console.log(`📍 Client Location: ${currentSlot.location}`);
-  console.log(`🔍 Testing Skylink Sensor: ${currentSlot.device}`);
-  console.log(`⏰ Time Slot: ${currentSlot.startTime} - ${currentSlot.endTime}`);
+  console.log(`📍 Client Location: ${effectiveSlot.location}`);
+  console.log(`🔍 Testing Skylink Sensor: ${effectiveSlot.device}`);
+  console.log(`⏰ Time Slot: ${effectiveSlot.startTime} - ${effectiveSlot.endTime}`);
   
   // Call appropriate fixture based on current location
   let response;
@@ -179,12 +184,19 @@ async function runCurrentScheduleTest(page, testCount, emailReporter, emailValid
   let responseStatus = 'N/A';
   
   try {
-    switch (currentSlot.location) {
+    switch (effectiveSlot.location) {
       case 'Bedroom':
         const bobBedroomPir = new BobBedroomPir(page);
         response = await bobBedroomPir.sendSensorData();
         responseStatus = response.status();
         console.log('✅ Bedroom PIR Sensor Test - Response Status:', responseStatus);
+        break;
+      
+      case 'Washroom':
+        const bobWashroomPir = new BobWashroomPir(page);
+        response = await bobWashroomPir.sendSensorData();
+        responseStatus = response.status();
+        console.log('✅ Washroom PIR Sensor Test - Response Status:', responseStatus);
         break;
         
       case 'Bathroom':
@@ -215,15 +227,15 @@ async function runCurrentScheduleTest(page, testCount, emailReporter, emailValid
         console.log('✅ Office PIR Sensor Test - Response Status:', responseStatus);
         break;
         
-      case 'Basement':
-        const bobBasementDoor = new BobBasementDoor(page);
-        response = await bobBasementDoor.sendSensorData();
+      case 'Dinning room':
+        const bobDinningroomPir = new BobDinningroomPir(page);
+        response = await bobDinningroomPir.sendSensorData();
         responseStatus = response.status();
-        console.log('✅ Basement DOOR Sensor Test - Response Status:', responseStatus);
+        console.log('✅ Dinning room PIR Sensor Test - Response Status:', responseStatus);
         break;
-        
+      
       default:
-        console.log(`❌ Unknown location: ${currentSlot.location}`);
+        console.log(`❌ Unknown location: ${effectiveSlot.location}`);
         testStatus = 'error';
         responseStatus = 'Unknown Location';
         
@@ -234,12 +246,12 @@ async function runCurrentScheduleTest(page, testCount, emailReporter, emailValid
               testCycle: testCount,
               dayName: dayName,
               currentTime: timeStr,
-              location: currentSlot.location,
-              device: currentSlot.device,
-              timeSlot: `${currentSlot.startTime} - ${currentSlot.endTime}`,
+              location: effectiveSlot.location,
+              device: effectiveSlot.device,
+              timeSlot: `${effectiveSlot.startTime} - ${effectiveSlot.endTime}`,
               status: 'error',
               responseStatus: 'Unknown Location',
-              error: `Unknown location: ${currentSlot.location}`
+              error: `Unknown location: ${effectiveSlot.location}`
             });
           } catch (emailError) {
             // Silently ignore email logging errors
@@ -248,10 +260,10 @@ async function runCurrentScheduleTest(page, testCount, emailReporter, emailValid
         return;
     }
     
-    console.log(`🎯 Skylink ${currentSlot.location} sensor test completed successfully`);
+    console.log(`🎯 Skylink ${effectiveSlot.location} sensor test completed successfully`);
     
   } catch (error) {
-    console.error(`❌ Error testing ${currentSlot.location} Skylink sensor:`, error.message);
+    console.error(`❌ Error testing ${effectiveSlot.location} Skylink sensor:`, error.message);
     testStatus = 'error';
     responseStatus = 'Error';
   }
@@ -263,9 +275,9 @@ async function runCurrentScheduleTest(page, testCount, emailReporter, emailValid
         testCycle: testCount,
         dayName: dayName,
         currentTime: timeStr,
-        location: currentSlot.location,
-        device: currentSlot.device,
-        timeSlot: `${currentSlot.startTime} - ${currentSlot.endTime}`,
+        location: effectiveSlot.location,
+        device: effectiveSlot.device,
+        timeSlot: `${effectiveSlot.startTime} - ${effectiveSlot.endTime}`,
         status: testStatus,
         responseStatus: responseStatus,
         error: testStatus === 'error' ? 'API call failed' : null
@@ -274,4 +286,6 @@ async function runCurrentScheduleTest(page, testCount, emailReporter, emailValid
       // Silently ignore email logging errors
     }
   }
+
+  // No state tracking required
 }
