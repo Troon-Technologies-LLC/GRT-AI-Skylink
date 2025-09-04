@@ -27,7 +27,14 @@ function fmtDate(date = new Date()) {
 function fmtTime(date = new Date()) {
   const opts = { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false };
   const fmt = new Intl.DateTimeFormat('en-CA', RESOLVED_TZ ? { ...opts, timeZone: RESOLVED_TZ } : opts);
-  return fmt.format(date);
+  const timeStr = fmt.format(date);
+  
+  // Fix 24:XX format to 00:XX for midnight hours
+  if (timeStr.startsWith('24:')) {
+    return timeStr.replace('24:', '00:');
+  }
+  
+  return timeStr;
 }
 
 function fmtDateOnly(date = new Date()) {

@@ -5,7 +5,7 @@ class BobDinningroomPir {
     this.apiUrl = 'https://dev-functions.grtinsight.com/api/Skylink';
     this.sensorData = {
       timestamp: Date.now() / 1000, // Unix timestamp in seconds
-      deviceId: "BOB Dinning room",
+      deviceId: "BOB Dining room",
       client_name: "GRT Health",
       payload_type: "PIR",
       frame_type: "DETECTED_MOVEMENT",
