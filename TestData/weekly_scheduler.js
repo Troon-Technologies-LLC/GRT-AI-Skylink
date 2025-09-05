@@ -2,24 +2,6 @@ const ScheduleReader = require('./schedule_reader');
 const { spawn } = require('child_process');
 const path = require('path');
 
-// Resolve TIME_ZONE from environment. Supports IANA (e.g., America/Toronto)
-// or numeric offsets (e.g., "-4" or "UTC-4"). Numeric offsets map to fixed
-// offset zones (Etc/GMT±N) which do NOT observe DST.
-function resolveTimeZone(tzEnv) {
-  if (!tzEnv) return null; // null => system local timezone
-  const tz = tzEnv.trim();
-  const m = tz.match(/^UTC?\s*([+-]\d{1,2})$/i) || tz.match(/^([+-]\d{1,2})$/);
-  if (m) {
-    const offset = parseInt(m[1], 10);
-    const sign = offset >= 0 ? '-' : '+'; // Etc/GMT has inverted sign
-    const abs = Math.abs(offset);
-    return `Etc/GMT${sign}${abs}`;
-  }
-  return tz; // assume IANA
-}
-
-const RESOLVED_TZ = resolveTimeZone(process.env.TIME_ZONE);
-
 class WeeklyScheduler {
   constructor() {
     this.currentSchedule = [];
