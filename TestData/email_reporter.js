@@ -22,21 +22,17 @@ function fmtDate(date = new Date()) {
   const opts = { dateStyle: 'medium', timeStyle: 'medium' };
   const fmt = new Intl.DateTimeFormat('en-CA', RESOLVED_TZ ? { ...opts, timeZone: RESOLVED_TZ } : opts);
   const s = fmt.format(date);
-  // Normalize any " 24:" occurrences to " 00:" for midnight under fixed-offset zones
-  return s.replace(' 24:', ' 00:');
+  // Normalize any 24:MM(:SS)? at start or after whitespace/comma to 00:MM(:SS)?
+  return s
+    .replace(/(^|[\s,])24:(\d{2})(?::(\d{2}))?/g, (m, p1, mm, ss) => `${p1}00:${mm}${ss ? `:${ss}` : ''}`);
 }
 
 function fmtTime(date = new Date()) {
   const opts = { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false };
   const fmt = new Intl.DateTimeFormat('en-CA', RESOLVED_TZ ? { ...opts, timeZone: RESOLVED_TZ } : opts);
   const timeStr = fmt.format(date);
-  
-  // Fix 24:XX format to 00:XX for midnight hours
-  if (timeStr.startsWith('24:')) {
-    return timeStr.replace('24:', '00:');
-  }
-  
-  return timeStr;
+  // Fix any leading 24:MM(:SS)? to 00:MM(:SS)?
+  return timeStr.replace(/^24:(\d{2})(?::(\d{2}))?/, (m, mm, ss) => `00:${mm}${ss ? `:${ss}` : ''}`);
 }
 
 function fmtDateOnly(date = new Date()) {
