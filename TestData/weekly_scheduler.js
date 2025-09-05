@@ -126,8 +126,10 @@ class WeeklyScheduler {
 
     console.log(`🧪 Running test: ${testCommand}`);
     
-    // Run the Playwright test
-    const child = spawn('npx', ['playwright', 'test', testCommand, '--project=chromium'], {
+    // Run the Playwright test (use correct npx executable on Windows)
+    const isWin = process.platform === 'win32';
+    const npxExec = isWin ? 'npx.cmd' : 'npx';
+    const child = spawn(npxExec, ['playwright', 'test', testCommand, '--project=chromium'], {
       cwd: path.join(__dirname, '..'),
       stdio: 'pipe'
     });
@@ -145,6 +147,14 @@ class WeeklyScheduler {
         console.log(`✅ Skylink ${location} test completed successfully`);
       } else {
         console.log(`❌ Skylink ${location} test failed with code ${code}`);
+      }
+    });
+
+    child.on('error', (err) => {
+      if (err && err.code === 'ENOENT') {
+        console.error('❌ Failed to start Playwright test: npx not found. Ensure Node.js is installed and npx is in PATH.');
+      } else {
+        console.error('❌ Failed to start Playwright test:', err.message);
       }
     });
   }
