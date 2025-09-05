@@ -126,10 +126,12 @@ class WeeklyScheduler {
 
     console.log(`🧪 Running test: ${testCommand}`);
     
-    // Run the Playwright test (use correct npx executable on Windows)
+    // Run the Playwright test
     const isWin = process.platform === 'win32';
-    const npxExec = isWin ? 'npx.cmd' : 'npx';
-    const child = spawn(npxExec, ['playwright', 'test', testCommand, '--project=chromium'], {
+    const args = ['playwright', 'test', testCommand, '--project=chromium'];
+    const spawnCmd = isWin ? 'cmd.exe' : 'npx';
+    const spawnArgs = isWin ? ['/c', 'npx', ...args] : args;
+    const child = spawn(spawnCmd, spawnArgs, {
       cwd: path.join(__dirname, '..'),
       stdio: 'pipe'
     });
