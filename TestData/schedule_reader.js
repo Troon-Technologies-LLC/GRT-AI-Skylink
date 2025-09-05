@@ -132,27 +132,27 @@ class ScheduleReader {
     }
   }
 
-  static getNextScheduleChange(schedule) {
-    // Guard: if schedule is empty or invalid, there's no next change
-    if (!Array.isArray(schedule) || schedule.length === 0) {
-      return null;
-    }
-
-    const currentTime = this.currentTimeInTZ();
-    
-    // Find the next time slot change
-    for (const slot of schedule) {
-      const startMinutes = this.timeToMinutes(slot.startTime);
-      const currentMinutes = this.timeToMinutes(currentTime);
-      
-      if (startMinutes > currentMinutes) {
-        return slot;
-      }
-    }
-    
-    // If no slot found for today, return first slot of next day
-    return schedule[0];
-  }
+  // static getNextScheduleChange(schedule) {
+  //   // Guard: if schedule is empty or invalid, there's no next change
+  //   if (!Array.isArray(schedule) || schedule.length === 0) {
+  //     return null;
+  //   }
+  //
+  //   const currentTime = this.currentTimeInTZ();
+  //   
+  //   // Find the next time slot change
+  //   for (const slot of schedule) {
+  //     const startMinutes = this.timeToMinutes(slot.startTime);
+  //     const currentMinutes = this.timeToMinutes(currentTime);
+  //     
+  //     if (startMinutes > currentMinutes) {
+  //       return slot;
+  //     }
+  //   }
+  //   
+  //   // If no slot found for today, return first slot of next day
+  //   return schedule[0];
+  // }
 }
 
 module.exports = ScheduleReader;
