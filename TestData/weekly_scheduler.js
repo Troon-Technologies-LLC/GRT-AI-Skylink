@@ -20,15 +20,6 @@ function resolveTimeZone(tzEnv) {
 
 const RESOLVED_TZ = resolveTimeZone(process.env.TIME_ZONE);
 
-function dayNameInConfiguredTZ(date = new Date()) {
-  const options = { weekday: 'long' };
-  const fmt = new Intl.DateTimeFormat(
-    'en-CA',
-    RESOLVED_TZ ? { ...options, timeZone: RESOLVED_TZ } : options
-  );
-  return fmt.format(date); // e.g., "Wednesday"
-}
-
 class WeeklyScheduler {
   constructor() {
     this.currentSchedule = [];
@@ -38,7 +29,7 @@ class WeeklyScheduler {
   }
 
   getCurrentDayFile() {
-    const dayName = dayNameInConfiguredTZ(new Date());
+    const dayName = ScheduleReader.currentDayNameInTZ(new Date());
     return `${dayName}.csv`;
   }
 
@@ -164,7 +155,8 @@ class WeeklyScheduler {
       'Kitchen': 'tests/individual/kitchen.spec.js',
       'Livingroom': 'tests/individual/livingroom.spec.js',
       'Office': 'tests/individual/office.spec.js',
-      'Bathroom': 'tests/individual/bathroom.spec.js',
+      'Bathroom': 'tests/individual/washroom.spec.js',
+      'Washroom': 'tests/individual/washroom.spec.js',
       'Dining room': 'tests/individual/dinningroom.spec.js'
     };
     

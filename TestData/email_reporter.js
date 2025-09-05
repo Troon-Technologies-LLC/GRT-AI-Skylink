@@ -21,7 +21,9 @@ const RESOLVED_TZ = resolveTimeZone(process.env.TIME_ZONE);
 function fmtDate(date = new Date()) {
   const opts = { dateStyle: 'medium', timeStyle: 'medium' };
   const fmt = new Intl.DateTimeFormat('en-CA', RESOLVED_TZ ? { ...opts, timeZone: RESOLVED_TZ } : opts);
-  return fmt.format(date);
+  const s = fmt.format(date);
+  // Normalize any " 24:" occurrences to " 00:" for midnight under fixed-offset zones
+  return s.replace(' 24:', ' 00:');
 }
 
 function fmtTime(date = new Date()) {
@@ -231,7 +233,9 @@ class EmailReporter {
       const htmlContent = this.generateEmailReport(results);
       
       const now = new Date();
-      const subject = `Skylink Sensor Report - ${fmtDateOnly(now)} ${new Intl.DateTimeFormat('en-CA', RESOLVED_TZ ? { hour: '2-digit', hour12: false, timeZone: RESOLVED_TZ } : { hour: '2-digit', hour12: false }).format(now)}:00`;
+      const hourOnly = new Intl.DateTimeFormat('en-CA', RESOLVED_TZ ? { hour: '2-digit', hour12: false, timeZone: RESOLVED_TZ } : { hour: '2-digit', hour12: false }).format(now);
+      const fixedHour = hourOnly === '24' ? '00' : hourOnly;
+      const subject = `Skylink Sensor Report - ${fmtDateOnly(now)} ${fixedHour}:00`;
 
       const mailOptions = {
         from: process.env.EMAIL_USER,

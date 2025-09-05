@@ -23,7 +23,7 @@ This project creates a 24/7 automation system for testing Skylink PIR and DOOR s
 - Handles "away from home" scenarios gracefully
 
 ### ✅ Skylink Device Support
-- **PIR Sensors**: Motion detection for Bedroom, Kitchen, Livingroom, Office, Bathroom, Dinning room
+- **PIR Sensors**: Motion detection for Bedroom, Kitchen, Livingroom, Office, Washroom, Dinning room
 - Dynamic payload generation with realistic sensor data
 - Proper API integration with https://dev-functions.grtinsight.com/api/Skylink
 
@@ -69,7 +69,7 @@ Content-Type: application/json
 
 ## 🏠 Device Mapping
 - **BOB Washroom PIR** → Washroom location (12:00 AM - 8:00 AM)
-- **BOB Bathroom PIR** → Bathroom location (8:00 AM - 8:30 AM)
+- **BOB Washroom PIR** → Washroom location (8:00 AM - 8:30 AM)
 - **BOB Kitchen PIR** → Kitchen location (8:30 AM - 9:00 AM)
 - **BOB Livingroom PIR** → Livingroom location (9:00 AM - 11:00 AM)
 - **BOB Office PIR** → Office location (11:00 AM - 8:00 PM)

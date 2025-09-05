@@ -4,7 +4,6 @@ const BobBedroomPir = require('../Fixtures/BobBedroomPir');
 const BobKitchenPir = require('../Fixtures/BobKitchenPir');
 const BobLivingroomPir = require('../Fixtures/BobLivingroomPir');
 const BobOfficePir = require('../Fixtures/BobOfficePir');
-const BobBathroomPir = require('../Fixtures/BobBathroomPir');
 const BobDinningroomPir = require('../Fixtures/BobDinningroomPir');
 const BobWashroomPir = require('../Fixtures/BobWashroomPir');
 const ScheduleReader = require('../TestData/schedule_reader');
@@ -46,9 +45,8 @@ function dateTimeStringInTZ(date = new Date()) {
 }
 
 function dayNameInTZ(date = new Date()) {
-  const options = { weekday: 'long' };
-  const fmt = new Intl.DateTimeFormat('en-CA', RESOLVED_TZ ? { ...options, timeZone: RESOLVED_TZ } : options);
-  return fmt.format(date); // e.g., "Saturday"
+  // Use centralized logic (robust for numeric offsets)
+  return ScheduleReader.currentDayNameInTZ(date);
 }
 
 // 24/7 Continuous Skylink Sensor Testing
@@ -192,18 +190,12 @@ async function runCurrentScheduleTest(page, testCount, emailReporter, emailValid
         console.log('✅ Bedroom PIR Sensor Test - Response Status:', responseStatus);
         break;
       
+      case 'Bathroom':
       case 'Washroom':
         const bobWashroomPir = new BobWashroomPir(page);
         response = await bobWashroomPir.sendSensorData();
         responseStatus = response.status();
         console.log('✅ Washroom PIR Sensor Test - Response Status:', responseStatus);
-        break;
-        
-      case 'Bathroom':
-        const bobBathroomPir = new BobBathroomPir(page);
-        response = await bobBathroomPir.sendSensorData();
-        responseStatus = response.status();
-        console.log('✅ Bathroom PIR Sensor Test - Response Status:', responseStatus);
         break;
         
       case 'Kitchen':
