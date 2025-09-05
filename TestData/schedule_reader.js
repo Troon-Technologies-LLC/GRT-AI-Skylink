@@ -1,73 +1,22 @@
 const fs = require('fs');
 const path = require('path');
+const Time = require('./time_utils');
 
-// Resolve TIME_ZONE from environment. If not set, use system local time.
-function resolveTimeZone(tzEnv) {
-  if (!tzEnv) return null; // null => system local timezone
-
-  const tz = tzEnv.trim();
-
-  // Support numeric offsets like "-4", "+3", "UTC-4", "UTC+5"
-  const m = tz.match(/^UTC?\s*([+-]\d{1,2})$/i) || tz.match(/^([+-]\d{1,2})$/);
-  if (m) {
-    const offset = parseInt(m[1], 10);
-    // Map to IANA fixed-offset zones (note the inverted sign semantics)
-    // UTC-4 (Toronto summer) => Etc/GMT+4
-    // UTC+3 => Etc/GMT-3
-    const sign = offset >= 0 ? '-' : '+';
-    const abs = Math.abs(offset);
-    return `Etc/GMT${sign}${abs}`;
-  }
-
-  // Otherwise assume it's a valid IANA timezone like 'America/Toronto'
-  return tz;
-}
-
-const RESOLVED_TZ = resolveTimeZone(process.env.TIME_ZONE);
-// Extract numeric offset in hours from TIME_ZONE env if provided (e.g., "-4" or "UTC+3").
-function getNumericOffsetHours(tzEnv) {
-  if (!tzEnv) return null;
-  const tz = tzEnv.trim();
-  const m = tz.match(/^UTC?\s*([+-]\d{1,2})$/i) || tz.match(/^([+-]\d{1,2})$/);
-  if (!m) return null;
-  return parseInt(m[1], 10);
-}
-const NUMERIC_OFFSET_HOURS = getNumericOffsetHours(process.env.TIME_ZONE);
+// Use shared timezone utilities
+const RESOLVED_TZ = Time.RESOLVED_TZ;
+const NUMERIC_OFFSET_HOURS = Time.NUMERIC_OFFSET_HOURS;
 
 class ScheduleReader {
   // Return current time in configured timezone (or system local) as HH:MM (24h)
   static currentTimeInTZ() {
-    const options = { hour: '2-digit', minute: '2-digit', hour12: false };
-    const fmt = new Intl.DateTimeFormat('en-CA', RESOLVED_TZ ? { ...options, timeZone: RESOLVED_TZ } : options);
-    const parts = fmt.formatToParts(new Date());
-    let hh = parts.find(p => p.type === 'hour')?.value || '00';
-    const mm = parts.find(p => p.type === 'minute')?.value || '00';
-    
-    // Fix 24:XX format to 00:XX for midnight hours
-    if (hh === '24') {
-      hh = '00';
-    }
-    
-    return `${hh}:${mm}`;
+    return Time.currentTimeInTZ();
   }
   
   // Robust current weekday name in configured timezone with special handling for numeric offsets
   static currentDayNameInTZ(date = new Date()) {
-    // If user specified a numeric offset (e.g., -4), avoid Intl midnight edge cases by computing manually
-    if (typeof NUMERIC_OFFSET_HOURS === 'number') {
-      // Convert date to UTC ms, then apply offset hours to get the local time under that fixed offset
-      const utcMs = date.getTime() + date.getTimezoneOffset() * 60 * 1000;
-      const localMs = utcMs + NUMERIC_OFFSET_HOURS * 60 * 60 * 1000;
-      const d = new Date(localMs);
-      const dayIndex = d.getUTCDay(); // 0=Sun..6=Sat in our synthetic local time
-      const names = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
-      return names[dayIndex];
-    }
-    // Fallback to Intl for IANA zones or system local
-    const options = { weekday: 'long' };
-    const fmt = new Intl.DateTimeFormat('en-CA', RESOLVED_TZ ? { ...options, timeZone: RESOLVED_TZ } : options);
-    return fmt.format(date);
+    return Time.currentDayNameInTZ(date);
   }
+
   static readDailySchedule(csvFileName) {
     try {
       const csvPath = path.join(__dirname, csvFileName);
@@ -184,6 +133,11 @@ class ScheduleReader {
   }
 
   static getNextScheduleChange(schedule) {
+    // Guard: if schedule is empty or invalid, there's no next change
+    if (!Array.isArray(schedule) || schedule.length === 0) {
+      return null;
+    }
+
     const currentTime = this.currentTimeInTZ();
     
     // Find the next time slot change

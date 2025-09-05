@@ -1,45 +1,13 @@
 const nodemailer = require('nodemailer');
 const fs = require('fs');
 const path = require('path');
+const Time = require('./time_utils');
 
-// Resolve TIME_ZONE from environment to an IANA zone or use system local if not set
-function resolveTimeZone(tzEnv) {
-  if (!tzEnv) return null; // system local timezone
-  const tz = tzEnv.trim();
-  const m = tz.match(/^UTC?\s*([+-]\d{1,2})$/i) || tz.match(/^([+-]\d{1,2})$/);
-  if (m) {
-    const offset = parseInt(m[1], 10);
-    const sign = offset >= 0 ? '-' : '+'; // Etc/GMT sign inversion
-    const abs = Math.abs(offset);
-    return `Etc/GMT${sign}${abs}`;
-  }
-  return tz; // assume IANA
-}
-
-const RESOLVED_TZ = resolveTimeZone(process.env.TIME_ZONE);
-
-function fmtDate(date = new Date()) {
-  const opts = { dateStyle: 'medium', timeStyle: 'medium' };
-  const fmt = new Intl.DateTimeFormat('en-CA', RESOLVED_TZ ? { ...opts, timeZone: RESOLVED_TZ } : opts);
-  const s = fmt.format(date);
-  // Normalize any 24:MM(:SS)? at start or after whitespace/comma to 00:MM(:SS)?
-  return s
-    .replace(/(^|[\s,])24:(\d{2})(?::(\d{2}))?/g, (m, p1, mm, ss) => `${p1}00:${mm}${ss ? `:${ss}` : ''}`);
-}
-
-function fmtTime(date = new Date()) {
-  const opts = { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false };
-  const fmt = new Intl.DateTimeFormat('en-CA', RESOLVED_TZ ? { ...opts, timeZone: RESOLVED_TZ } : opts);
-  const timeStr = fmt.format(date);
-  // Fix any leading 24:MM(:SS)? to 00:MM(:SS)?
-  return timeStr.replace(/^24:(\d{2})(?::(\d{2}))?/, (m, mm, ss) => `00:${mm}${ss ? `:${ss}` : ''}`);
-}
-
-function fmtDateOnly(date = new Date()) {
-  const opts = { year: 'numeric', month: '2-digit', day: '2-digit' };
-  const fmt = new Intl.DateTimeFormat('en-CA', RESOLVED_TZ ? { ...opts, timeZone: RESOLVED_TZ } : opts);
-  return fmt.format(date);
-}
+// Use shared timezone utilities and formatters
+const RESOLVED_TZ = Time.RESOLVED_TZ;
+const fmtDate = Time.fmtDate;
+const fmtTime = Time.fmtTime;
+const fmtDateOnly = Time.fmtDateOnly;
 
 class EmailReporter {
   constructor() {
