@@ -55,19 +55,13 @@ class BobBedroomPir {
   }
 
   // Update sensor status
-  // updateFrameType(frameType) {
-  //   this.sensorData.frame_type = frameType;
-  // }
+  
 
   // Update temperature
-  // updateTemperature(temp) {
-  //   this.sensorData.temp = temp.toString();
-  // }
+  
 
   // Update battery level
-  // updateBattery(batteryLevel) {
-  //   this.sensorData.battery = batteryLevel;
-  // }
+  
 }
 
 module.exports = BobBedroomPir;
